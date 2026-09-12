@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% block title %}Eval scores · Akisok{% endblock %}
+{% block content %}
+<h1>Eval scores</h1>
+{% if quality %}
+<h2>Latest quality eval</h2>
+<div class="stat-grid">
+  <article class="stat-card">
+    <p class="stat-value">{{ quality.sample_size }}</p>
+    <p class="stat-label">Samples</p>
+  </article>
+  <article class="stat-card">
+    <p class="stat-value">{{ (quality.pass_rate * 100)|round(0) }}%</p>
+    <p class="stat-label">Pass rate</p>
+  </article>
+  <article class="stat-card">
+    <p class="stat-value">{{ "%.1f"|format(quality.averages.relevance or 0) }}</p>
+    <p class="stat-label">Relevance / 5</p>
+  </article>
+  <article class="stat-card">
+    <p class="stat-value">{{ "%.1f"|format(quality.averages.originality or 0) }}</p>
+    <p class="stat-label">Originality / 5</p>
+  </article>
+  <article class="stat-card">
+    <p class="stat-value">{{ "%.1f"|format(quality.averages.source_quality or 0) }}</p>
+    <p class="stat-label">Source quality / 5</p>
+  </article>
+  <article class="stat-card">
+    <p class="stat-value">{{ "%.1f"|format(quality.averages.classification_accuracy or 0) }}</p>
+    <p class="stat-label">Classification acc / 5</p>
+  </article>
+</div>
+{% else %}
+<p class="empty-state">No <code>quality_evals</code> yet. Run <code>python -m src.ops.eval_quality</code>.</p>
+{% endif %}
+<h2>Guardrail precision</h2>
+<div class="stat-grid">
+  <article class="stat-card">
+    <p class="stat-value">{{ guardrails.n }}</p>
+    <p class="stat-label">Decided items</p>
+  </article>
+  <article class="stat-card">
+    <p class="stat-value">{{ guardrails.tp }}</p>
+    <p class="stat-label">True positive</p>
+  </article>
+  <article class="stat-card">
+    <p class="stat-value">{{ guardrails.fp }}</p>
+    <p class="stat-label">False positive</p>
+  </article>
+  <article class="stat-card">
+    <p class="stat-value">{{ guardrails.fn }}</p>
+    <p class="stat-label">False negative</p>
+  </article>
+  <article class="stat-card">
+    <p class="stat-value">{{ guardrails.tn }}</p>
+    <p class="stat-label">True negative</p>
+  </article>
+  <article class="stat-card">
+    <p class="stat-value">{% if guardrails.precision is none %}n/a{% else %}{{ "%.2f"|format(guardrails.precision) }}{% endif %}</p>
+    <p class="stat-label">Precision</p>
+  </article>
+  <article class="stat-card">
+    <p class="stat-value">{% if guardrails.recall is none %}n/a{% else %}{{ "%.2f"|format(guardrails.recall) }}{% endif %}</p>
+    <p class="stat-label">Recall</p>
+  </article>
+</div>
+{% if guardrails.small_sample %}
+<p class="empty-state">Sample is too small to draw conclusions ({{ guardrails.n }} &lt; {{ guardrails.min_samples }} decided items).</p>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block title %}{{ item.title }} · Akisok{% endblock %}
+{% block content %}
+{% macro render_value(value) %}
+  {% if value is mapping %}
+    <dl class="details">
+      {% for key, nested in value.items() %}
+      <dt>{{ key }}</dt>
+      <dd>{{ render_value(nested) }}</dd>
+      {% endfor %}
+    </dl>
+  {% elif value is iterable and value is not string %}
+    <ul>
+      {% for nested in value %}
+      <li>{{ render_value(nested) }}</li>
+      {% endfor %}
+    </ul>
+  {% elif value is none %}
+    <span class="muted">null</span>
+  {% else %}
+    {{ value }}
+  {% endif %}
+{% endmacro %}
+
+<p><a href="/queue">← Queue</a></p>
+<h1>{{ item.title }}</h1>
+<p class="meta">
+  <span class="badge status-{{ item.status }}">{{ item.status }}</span>
+  <span>{{ item.pillar }}</span>
+  {% if item.lga %}<span>{{ item.lga }}</span>{% endif %}
+  <span>relevance {{ item.relevance_score }}</span>
+</p>
+<p>
+  Source:
+  <a href="{{ item.source_url }}" rel="noopener noreferrer">{{ item.source_url }}</a>
+</p>
+
+<section>
+  <h2>Draft</h2>
+  <form method="post" action="/items/{{ item.id }}/edit">
+    <textarea name="draft_text" rows="16">{{ item.draft_text }}</textarea>
+    <button type="submit">Save edit</button>
+  </form>
+</section>
+
+<section>
+  <h2>Guardrail details</h2>
+  {{ render_value(item.guardrail_details or {}) }}
+</section>
+
+<section class="actions">
+  <form method="post" action="/items/{{ item.id }}/approve">
+    <button type="submit" class="approve">Approve</button>
+  </form>
+  <form method="post" action="/items/{{ item.id }}/reject">
+    <label for="reason">Rejection reason</label>
+    <input id="reason" name="reason" type="text" value="{{ item.rejection_reason or '' }}" />
+    <button type="submit" class="reject">Reject</button>
+  </form>
+</section>
+{% endblock %}

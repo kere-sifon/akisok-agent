@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}Review queue · Akisok{% endblock %}
+{% block content %}
+<h1>Review queue</h1>
+{% if not items %}
+<p class="empty-state">No items in <code>review_queue</code>.</p>
+{% else %}
+<table class="queue">
+  <thead>
+    <tr>
+      <th>Title</th>
+      <th>Pillar</th>
+      <th>LGA</th>
+      <th>Status</th>
+      <th>Flags</th>
+      <th>Created</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for item in items %}
+    <tr class="row-{{ item.status }}">
+      <td><a href="/items/{{ item.id }}">{{ item.title }}</a></td>
+      <td>{{ item.pillar }}</td>
+      <td>{{ item.lga or "—" }}</td>
+      <td><span class="badge status-{{ item.status }}">{{ item.status }}</span></td>
+      <td>
+        {% for flag in item.guardrail_flags or [] %}
+        <span class="badge flag">{{ flag }}</span>
+        {% endfor %}
+      </td>
+      <td class="muted">{{ item.created_at_label }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}Status · Akisok{% endblock %}
+{% block content %}
+<h1>Status</h1>
+<div class="stat-grid">
+  <article class="stat-card">
+    <p class="stat-value">{{ counts.pending }}</p>
+    <p class="stat-label"><span class="badge status-pending">pending</span></p>
+  </article>
+  <article class="stat-card">
+    <p class="stat-value">{{ counts.flagged }}</p>
+    <p class="stat-label"><span class="badge status-flagged">flagged</span></p>
+  </article>
+  <article class="stat-card">
+    <p class="stat-value">{{ counts.approved }}</p>
+    <p class="stat-label"><span class="badge status-approved">approved</span></p>
+  </article>
+  <article class="stat-card">
+    <p class="stat-value">{{ counts.rejected }}</p>
+    <p class="stat-label"><span class="badge status-rejected">rejected</span></p>
+  </article>
+</div>
+{% if last_run %}
+<h2>Last pipeline run</h2>
+<div class="panel">
+  <p>
+    {{ last_run.started_at }} ·
+    queued {{ last_run.items_queued }} ·
+    flagged {{ last_run.items_flagged }} ·
+    ${{ "%.4f"|format(last_run.estimated_cost_usd or 0) }}
+  </p>
+</div>
+{% else %}
+<p class="empty-state">No <code>pipeline_runs</code> documents yet.</p>
+{% endif %}
+{% endblock %}

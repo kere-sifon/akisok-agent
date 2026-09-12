@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{% block title %}Akisok review{% endblock %}</title>
+    <link rel="stylesheet" href="/static/style.css?v=dashboard-polish" />
+  </head>
+  <body>
+    <header class="site-header">
+      <a class="brand" href="/">Akisok review</a>
+      <p class="muted">Local queue. Approve publishes to the content repo when configured.</p>
+      {% set path = request.url.path %}
+      <nav class="tabs" aria-label="Primary">
+        <a href="/" class="{% if path == '/' %}active{% endif %}">Status</a>
+        <a href="/eval-scores" class="{% if path.startswith('/eval-scores') %}active{% endif %}">Eval scores</a>
+        <a href="/cost" class="{% if path.startswith('/cost') %}active{% endif %}">Cost</a>
+        <a href="/queue" class="{% if path.startswith('/queue') or path.startswith('/items') %}active{% endif %}">Review queue</a>
+      </nav>
+    </header>
+    <main>
+      {% if notice %}
+      <p class="notice">{{ notice }}</p>
+      {% endif %}
+      {% block content %}{% endblock %}
+    </main>
+  </body>
+</html>
