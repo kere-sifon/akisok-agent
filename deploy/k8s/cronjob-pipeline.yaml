@@ -1,0 +1,52 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: akisok-pipeline
+  namespace: akisok
+  labels: {app: akisok-pipeline}
+spec:
+  schedule: "0 8 * * *"
+  timeZone: America/Toronto
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 1
+      template:
+        metadata:
+          labels: {app: akisok-pipeline}
+        spec:
+          restartPolicy: Never
+          imagePullSecrets:
+            - name: nexus-pull
+          dnsConfig:
+            options:
+              - name: ndots
+                value: "2"
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1001
+            runAsGroup: 100
+            fsGroup: 100
+            seccompProfile: {type: RuntimeDefault}
+          containers:
+            - name: pipeline
+              image: nexus-lan.keresifon.com/docker-hosted/akisok-agent:0.1.0
+              command: ["python", "-m", "src.graph.pipeline"]
+              envFrom:
+                - secretRef:
+                    name: akisok-agent-env
+              resources:
+                requests: {cpu: 100m, memory: 256Mi}
+                limits: {memory: 1Gi}
+              securityContext:
+                allowPrivilegeEscalation: false
+                readOnlyRootFilesystem: true
+                capabilities: {drop: [ALL]}
+              volumeMounts:
+                - name: tmp
+                  mountPath: /tmp
+          volumes:
+            - name: tmp
+              emptyDir: {}

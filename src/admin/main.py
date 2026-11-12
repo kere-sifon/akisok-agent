@@ -27,4 +27,5 @@ if __name__ == "__main__":
     import uvicorn
 
     port = int(os.getenv("ADMIN_UI_PORT", "8001"))
-    uvicorn.run("src.admin.main:app", host="127.0.0.1", port=port, reload=True)
+    host = os.getenv("ADMIN_UI_HOST", "127.0.0.1")
+    uvicorn.run("src.admin.main:app", host=host, port=port, reload=True)

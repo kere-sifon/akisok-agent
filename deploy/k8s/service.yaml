@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: akisok-admin
+  namespace: akisok
+  annotations:
+    # Distinct from site .244, kwesiblack .243, keresifon .242, finance .241, quephase .240.
+    lbipam.cilium.io/ips: "192.168.2.245"
+spec:
+  type: LoadBalancer
+  selector: {app: akisok-admin}
+  ports:
+    - name: http
+      port: 8001
+      targetPort: http

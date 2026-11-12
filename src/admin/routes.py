@@ -66,12 +66,17 @@ def build_router(templates: Jinja2Templates) -> APIRouter:
         end = datetime(now.year, now.month, monthrange(now.year, now.month)[1], 23, 59, 59, tzinfo=timezone.utc)
         runs = store.list_pipeline_runs_between(start, end)
         image_costs = store.list_image_generation_costs_between(start, end)
+        totals = summarize_month(
+            store.list_all_pipeline_runs(),
+            store.list_all_image_generation_costs(),
+        )
         return templates.TemplateResponse(
             request,
             "cost.html",
             {
                 "month": now.strftime("%Y-%m"),
                 "stats": summarize_month(runs, image_costs),
+                "totals": totals,
                 "runs": runs,
             },
         )

@@ -1,0 +1,81 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: akisok-admin
+  namespace: akisok
+  labels: {app: akisok-admin}
+spec:
+  replicas: 1
+  revisionHistoryLimit: 3
+  selector:
+    matchLabels: {app: akisok-admin}
+  template:
+    metadata:
+      labels: {app: akisok-admin}
+    spec:
+      imagePullSecrets:
+        - name: nexus-pull
+      dnsConfig:
+        options:
+          - name: ndots
+            value: "2"
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1001
+        runAsGroup: 100
+        fsGroup: 100
+        seccompProfile: {type: RuntimeDefault}
+      containers:
+        - name: admin
+          image: nexus-lan.keresifon.com/docker-hosted/akisok-agent:0.1.0
+          command: ["/k8s-admin-entrypoint.sh"]
+          ports:
+            - name: http
+              containerPort: 8001
+          envFrom:
+            - secretRef:
+                name: akisok-agent-env
+          env:
+            - name: ADMIN_UI_HOST
+              value: "0.0.0.0"
+            - name: CONTENT_REPO_PATH
+              value: /content/akisok-site
+            - name: GIT_SSH_KEY_PATH
+              value: /var/run/secrets/git-ssh/id_ed25519
+          resources:
+            requests: {cpu: 50m, memory: 256Mi}
+            limits: {memory: 1Gi}
+          readinessProbe:
+            httpGet: {path: /, port: http}
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            httpGet: {path: /, port: http}
+            initialDelaySeconds: 30
+            periodSeconds: 20
+            failureThreshold: 3
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: {drop: [ALL]}
+          volumeMounts:
+            - name: content
+              mountPath: /content
+            - name: tmp
+              mountPath: /tmp
+            - name: ssh-home
+              mountPath: /home/akisok
+            - name: git-ssh
+              mountPath: /var/run/secrets/git-ssh
+              readOnly: true
+      volumes:
+        - name: content
+          emptyDir: {}
+        - name: tmp
+          emptyDir: {}
+        - name: ssh-home
+          emptyDir: {}
+        - name: git-ssh
+          secret:
+            secretName: akisok-git-ssh
+            defaultMode: 0400

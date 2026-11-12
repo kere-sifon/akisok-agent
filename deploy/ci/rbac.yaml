@@ -1,0 +1,47 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: github-deployer-agent
+  namespace: akisok
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: github-deployer-agent-token
+  namespace: akisok
+  annotations:
+    kubernetes.io/service-account.name: github-deployer-agent
+type: kubernetes.io/service-account-token
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: github-deployer-agent
+  namespace: akisok
+rules:
+  - apiGroups: ["apps"]
+    resources: [deployments, replicasets]
+    verbs: [get, list, watch, create, update, patch]
+  - apiGroups: [""]
+    resources: [services]
+    verbs: [get, list, watch, create, update, patch]
+  - apiGroups: ["batch"]
+    resources: [cronjobs]
+    verbs: [get, list, watch, create, update, patch]
+  - apiGroups: [""]
+    resources: [pods, pods/log, events]
+    verbs: [get, list, watch]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: github-deployer-agent
+  namespace: akisok
+subjects:
+  - kind: ServiceAccount
+    name: github-deployer-agent
+    namespace: akisok
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: github-deployer-agent

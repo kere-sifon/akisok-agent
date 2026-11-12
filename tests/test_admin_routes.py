@@ -85,10 +85,58 @@ def test_shared_nav_and_tab_routes() -> None:
     assert queue.status_code == 200
     assert evals.status_code == 200
     assert cost.status_code == 200
+    assert "Total so far" in cost.text
+    assert "Pipeline this month" in cost.text
     assert 'href="/queue"' in status.text
     assert "Review queue" in status.text
     assert "Status" in status.text
     assert "No items in" in queue.text
+
+
+def test_cost_page_total_so_far_includes_prior_months() -> None:
+    now = datetime.now(timezone.utc)
+    this_month = datetime(now.year, now.month, 10, tzinfo=timezone.utc)
+    prior = (
+        datetime(now.year - 1, 12, 10, tzinfo=timezone.utc)
+        if now.month == 1
+        else datetime(now.year, now.month - 1, 10, tzinfo=timezone.utc)
+    )
+    store = _store([])
+    store.pipeline_runs.insert_one(
+        {
+            "started_at": prior,
+            "estimated_cost_usd": 1.25,
+            "items_queued": 2,
+            "items_flagged": 0,
+            "token_usage": {},
+        }
+    )
+    store.pipeline_runs.insert_one(
+        {
+            "started_at": this_month,
+            "estimated_cost_usd": 0.40,
+            "items_queued": 1,
+            "items_flagged": 0,
+            "token_usage": {},
+        }
+    )
+    store.image_generation_costs.insert_one(
+        {
+            "created_at": prior,
+            "estimated_cost_usd": 0.03,
+            "images": 1,
+        }
+    )
+    client = _client(store)
+
+    response = client.get("/cost")
+
+    assert response.status_code == 200
+    assert "$1.68" in response.text
+    assert "$0.40" in response.text
+    assert "$1.65 pipeline" in response.text
+    assert "$0.03 images" in response.text
+    assert "Pipeline this month" in response.text
 
 
 def test_item_detail_renders_draft_and_guardrail_details() -> None:

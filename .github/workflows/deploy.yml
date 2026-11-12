@@ -1,0 +1,58 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - "**.md"
+      - "tests/**"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing image tag to roll out (skips build). Blank = build current commit."
+        required: false
+        default: ""
+
+concurrency:
+  group: deploy-homelab-akisok-agent
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: [self-hosted, linux, x64, homelab]
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to Nexus
+        run: echo "${{ secrets.NEXUS_PUSH_PASSWORD }}" | docker login nexus-lan.keresifon.com -u "${{ secrets.NEXUS_PUSH_USER }}" --password-stdin
+
+      - name: Kubeconfig (github-deployer-agent, akisok namespace)
+        run: |
+          mkdir -p "$RUNNER_TEMP/kube"
+          echo "${{ secrets.KUBE_CONFIG_B64 }}" | base64 --decode > "$RUNNER_TEMP/kube/config"
+          chmod 600 "$RUNNER_TEMP/kube/config"
+          echo "KUBECONFIG=$RUNNER_TEMP/kube/config" >> "$GITHUB_ENV"
+
+      - name: Build, push and roll out
+        env:
+          SYNC_SECRETS: "0"
+          TAG: ${{ github.event.inputs.tag }}
+        run: |
+          chmod +x deploy/deploy.sh
+          if [ -n "$TAG" ]; then deploy/deploy.sh apply; else unset TAG; deploy/deploy.sh all; fi
+
+      - name: Show state on failure
+        if: failure()
+        run: |
+          kubectl -n akisok get pods,cronjob -o wide || true
+          kubectl -n akisok get events --sort-by=.lastTimestamp | tail -20 || true
+
+      - name: Clean up credentials
+        if: always()
+        run: |
+          rm -rf "$RUNNER_TEMP/kube"
+          docker logout nexus-lan.keresifon.com || true

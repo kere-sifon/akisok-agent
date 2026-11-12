@@ -163,15 +163,18 @@ class ReviewQueueStore:
     def list_pipeline_runs(self, limit: int = 10) -> list[dict[str, Any]]:
         return _newest(self.pipeline_runs.find({}), "finished_at", limit)
 
+    def list_all_pipeline_runs(self) -> list[dict[str, Any]]:
+        return [dict(document) for document in self.pipeline_runs.find({})]
+
     def list_pipeline_runs_between(self, start: datetime, end: datetime) -> list[dict[str, Any]]:
         rows = []
-        for document in self.pipeline_runs.find({}):
+        for document in self.list_all_pipeline_runs():
             started = document.get("started_at")
             if not isinstance(started, datetime):
                 continue
             moment = started if started.tzinfo else started.replace(tzinfo=timezone.utc)
             if start <= moment <= end:
-                rows.append(dict(document))
+                rows.append(document)
         return rows
 
     def insert_quality_eval(self, document: dict[str, Any]) -> str:
@@ -206,15 +209,18 @@ class ReviewQueueStore:
         result = self.image_generation_costs.insert_one(document)
         return str(result.inserted_id)
 
+    def list_all_image_generation_costs(self) -> list[dict[str, Any]]:
+        return [dict(document) for document in self.image_generation_costs.find({})]
+
     def list_image_generation_costs_between(self, start: datetime, end: datetime) -> list[dict[str, Any]]:
         rows = []
-        for document in self.image_generation_costs.find({}):
+        for document in self.list_all_image_generation_costs():
             created = document.get("created_at")
             if not isinstance(created, datetime):
                 continue
             moment = created if created.tzinfo else created.replace(tzinfo=timezone.utc)
             if start <= moment <= end:
-                rows.append(dict(document))
+                rows.append(document)
         return rows
 
     def list_lga_coverage(self) -> list[dict[str, Any]]:

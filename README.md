@@ -2,7 +2,7 @@
 
 Deterministic LangGraph pipeline that **discovers** items with Bedrock native tool calling against a web search API (Tavily), classifies and drafts short posts, runs guardrails, and writes drafts to MongoDB Atlas as `pending` or `flagged`.
 
-Flagged items are **never dropped** — they only need extra scrutiny. Review happens in a local FastAPI admin UI. Approve updates Mongo and calls `publish_item()`, which writes MDX into the `akisok-site` repo, commits, and pushes (Vercel rebuilds from `main`).
+Flagged items are **never dropped** — they only need extra scrutiny. Review happens in the FastAPI admin UI. Approve updates Mongo and calls `publish_item()`, which writes MDX into the `akisok-site` repo, commits, and pushes. Homelab CI then rebuilds the public site image (same as Vercel did from `main`).
 
 ```
 discover → classify → draft → guardrail_check → queue → record_run
@@ -23,6 +23,29 @@ python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
 cp .env.example .env
+```
+
+## Homelab Kubernetes
+
+Production admin + CronJob live on **homelab-k8s** (same Nexus / Cilium / gh-runner-02 pattern as finance-agent). See `deploy/k8s/README.md`. LAN: http://192.168.2.245:8001 — public https://akisok-admin.keresifon.com behind Cloudflare Access.
+
+## Scheduled discovery (this Mac)
+
+Use this only if the cluster CronJob is not running. Once a day the pipeline fills `review_queue`. Approve stays manual.
+
+```bash
+chmod +x scripts/run_pipeline.sh scripts/install_pipeline_schedule.sh
+./scripts/install_pipeline_schedule.sh
+```
+
+That installs `~/Library/LaunchAgents/com.akisok.curation-pipeline.plist` for **08:00** local time once a day. Logs go to `logs/pipeline.stdout.log` (gitignored). The Mac must be awake (or the job runs at the next wake).
+
+```bash
+# run one job immediately
+launchctl kickstart -k "gui/$(id -u)/com.akisok.curation-pipeline"
+
+# stop the schedule
+launchctl bootout "gui/$(id -u)" "$HOME/Library/LaunchAgents/com.akisok.curation-pipeline.plist"
 ```
 
 Fill `.env` (no secrets or model IDs belong in code):
@@ -101,7 +124,7 @@ Set `CONTENT_REPO_PATH` to a local git checkout of `akisok-site`. On Approve, `p
 
 If `CONTENT_REPO_PATH` is unset, missing, or not a git repo, publish returns `{"published": False, "reason": "content repo not configured"}` and does not raise. Git step failures return `{"published": False, "reason": "..."}`; a successful local commit with a failed push is left in place for a later retry. Mongo approval still succeeds.
 
-The public site is `https://akisok-site.vercel.app` from `kere-sifon/akisok-site` **`main`**. This agent never talks to Vercel. Approve writes MDX, commits, and `git push`es the **currently checked-out branch** of `CONTENT_REPO_PATH`. For the live site to update, that checkout must be on `main` with `origin` = `https://github.com/kere-sifon/akisok-site.git`, and Vercel must have the same Cloudinary server env vars as the site repo (`CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`) so `akisok/{image key}` resolves at build time.
+The public site is `https://akisok.keresifon.com` from `kere-sifon/akisok-site` **`main`**, built as a homelab image. This agent never talks to the cluster API. Approve writes MDX, commits, and `git push`es the **currently checked-out branch** of `CONTENT_REPO_PATH`. For the live site to update, that checkout must be on `main` with `origin` = `git@github.com:kere-sifon/akisok-site.git` (or HTTPS), and the site image build must have Cloudinary (`CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`) so `akisok/{image key}` resolves at build time.
 
 ## Guardrails
 
@@ -164,7 +187,7 @@ The admin app in `src/admin/` is separate from the graph. `publish_item()` write
 
 ## Ops: cost and eval CLIs
 
-Each pipeline run writes one `pipeline_runs` document (`run_id`, stage counts, per-model `token_usage`, `estimated_cost_usd`). Approve-time Stable Image Core images are billed per image (`PRICING_USD_PER_IMAGE`, currently $0.03) and stored in `image_generation_costs` — they are not part of the original discovery run. The Cost tab and `cost_report` CLI add those rows into the monthly total. Pricing lives in `src/ops/pricing.py`. Override without a code change via `PRICING_OVERRIDE_JSON` (token rates, or `{"model-id": {"per_image": 0.03}}`).
+Each pipeline run writes one `pipeline_runs` document (`run_id`, stage counts, per-model `token_usage`, `estimated_cost_usd`). Approve-time Stable Image Core images are billed per image (`PRICING_USD_PER_IMAGE`, currently $0.03) and stored in `image_generation_costs` — they are not part of the original discovery run. The Cost tab and `cost_report` CLI show this month and an all-time **Total so far** (every pipeline run plus every image). Pricing lives in `src/ops/pricing.py`. Override without a code change via `PRICING_OVERRIDE_JSON` (token rates, or `{"model-id": {"per_image": 0.03}}`).
 
 ```bash
 python -m src.ops.cost_report --month 2026-09

@@ -15,6 +15,8 @@ def summarize_month(runs: list[dict], image_costs: list[dict] | None = None) -> 
         for usage in (run.get("token_usage") or {}).values():
             input_tokens += int(usage.get("input_tokens") or 0)
             output_tokens += int(usage.get("output_tokens") or 0)
+    pipeline_cost_usd = sum(float(run.get("estimated_cost_usd") or 0) for run in runs)
+    image_cost_usd = sum(float(row.get("estimated_cost_usd") or 0) for row in (image_costs or []))
     return {
         "runs": len(runs),
         "items_discovered": sum(int(run.get("items_discovered") or 0) for run in runs),
@@ -23,25 +25,33 @@ def summarize_month(runs: list[dict], image_costs: list[dict] | None = None) -> 
         "input_tokens": input_tokens,
         "output_tokens": output_tokens,
         "image_count": sum(int(row.get("images") or 0) for row in (image_costs or [])),
-        "image_cost_usd": sum(float(row.get("estimated_cost_usd") or 0) for row in (image_costs or [])),
-        "estimated_cost_usd": sum(float(run.get("estimated_cost_usd") or 0) for run in runs)
-        + sum(float(row.get("estimated_cost_usd") or 0) for row in (image_costs or [])),
+        "pipeline_cost_usd": pipeline_cost_usd,
+        "image_cost_usd": image_cost_usd,
+        "estimated_cost_usd": pipeline_cost_usd + image_cost_usd,
     }
 
 
-def format_summary(month: str, stats: dict) -> str:
-    return (
-        f"Month:              {month}\n"
-        f"Runs:                {stats['runs']}\n"
-        f"Items discovered:    {stats['items_discovered']}\n"
-        f"Items queued:        {stats['items_queued']}\n"
-        f"Items flagged:       {stats['items_flagged']}\n"
-        f"Total tokens (in):   {stats['input_tokens']:,}\n"
-        f"Total tokens (out):  {stats['output_tokens']:,}\n"
-        f"Images generated:    {stats.get('image_count', 0)}\n"
-        f"Image cost:          ${float(stats.get('image_cost_usd') or 0):.2f}\n"
-        f"Estimated cost:      ${stats['estimated_cost_usd']:.2f}\n"
-    )
+def format_summary(month: str, stats: dict, *, totals: dict | None = None) -> str:
+    lines = [
+        f"Month:              {month}",
+        f"Runs:                {stats['runs']}",
+        f"Items discovered:    {stats['items_discovered']}",
+        f"Items queued:        {stats['items_queued']}",
+        f"Items flagged:       {stats['items_flagged']}",
+        f"Total tokens (in):   {stats['input_tokens']:,}",
+        f"Total tokens (out):  {stats['output_tokens']:,}",
+        f"Images generated:    {stats.get('image_count', 0)}",
+        f"Pipeline this month: ${float(stats.get('pipeline_cost_usd') or 0):.2f}",
+        f"Image cost:          ${float(stats.get('image_cost_usd') or 0):.2f}",
+        f"This month:          ${stats['estimated_cost_usd']:.2f}",
+    ]
+    if totals is not None:
+        lines.append(
+            f"Total so far:        ${totals['estimated_cost_usd']:.2f} "
+            f"(pipeline ${float(totals.get('pipeline_cost_usd') or 0):.2f} + "
+            f"images ${float(totals.get('image_cost_usd') or 0):.2f})"
+        )
+    return "\n".join(lines) + "\n"
 
 
 def parse_month(value: str | None) -> tuple[int, int, str]:
@@ -65,7 +75,11 @@ def main(argv: list[str] | None = None) -> None:
     end = datetime(year, month, end_day, 23, 59, 59, tzinfo=timezone.utc)
     runs = store.list_pipeline_runs_between(start, end)
     images = store.list_image_generation_costs_between(start, end)
-    print(format_summary(label, summarize_month(runs, images)), end="")
+    totals = summarize_month(
+        store.list_all_pipeline_runs(),
+        store.list_all_image_generation_costs(),
+    )
+    print(format_summary(label, summarize_month(runs, images), totals=totals), end="")
 
 
 if __name__ == "__main__":

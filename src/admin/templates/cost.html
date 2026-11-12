@@ -3,17 +3,25 @@
 {% block content %}
 <h1>Cost</h1>
 <div class="stat-grid">
+  <article class="stat-card stat-card-total">
+    <p class="stat-value">${{ "%.2f"|format(totals.estimated_cost_usd) }}</p>
+    <p class="stat-label">Total so far</p>
+    <p class="stat-breakdown">
+      ${{ "%.2f"|format(totals.pipeline_cost_usd or 0) }} pipeline
+      + ${{ "%.2f"|format(totals.image_cost_usd or 0) }} images
+    </p>
+  </article>
+  <article class="stat-card">
+    <p class="stat-value">${{ "%.2f"|format(stats.pipeline_cost_usd or 0) }}</p>
+    <p class="stat-label">Pipeline this month</p>
+  </article>
   <article class="stat-card">
     <p class="stat-value">{{ month }}</p>
     <p class="stat-label">Month</p>
   </article>
   <article class="stat-card">
     <p class="stat-value">{{ stats.runs }}</p>
-    <p class="stat-label">Runs</p>
-  </article>
-  <article class="stat-card">
-    <p class="stat-value">${{ "%.2f"|format(stats.estimated_cost_usd) }}</p>
-    <p class="stat-label">Estimated cost</p>
+    <p class="stat-label">Runs this month</p>
   </article>
   <article class="stat-card">
     <p class="stat-value">{{ "{:,}".format(stats.input_tokens) }}</p>
@@ -25,15 +33,19 @@
   </article>
   <article class="stat-card">
     <p class="stat-value">{{ stats.image_count or 0 }}</p>
-    <p class="stat-label">Images generated</p>
+    <p class="stat-label">Images this month</p>
   </article>
   <article class="stat-card">
     <p class="stat-value">${{ "%.2f"|format(stats.image_cost_usd or 0) }}</p>
-    <p class="stat-label">Image cost</p>
+    <p class="stat-label">Image cost this month</p>
   </article>
 </div>
+<p class="muted">
+  Total so far is every pipeline run plus every approve-time image.
+  Pipeline this month matches the table. Image cost is added only in Total so far.
+</p>
 {% if runs %}
-<h2>Pipeline runs</h2>
+<h2>Pipeline runs this month</h2>
 <table class="queue">
   <thead>
     <tr>
