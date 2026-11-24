@@ -27,7 +27,7 @@ cp .env.example .env
 
 ## Homelab Kubernetes
 
-Production admin + CronJob live on **homelab-k8s** (same Nexus / Cilium / gh-runner-02 pattern as finance-agent). See `deploy/k8s/README.md`. LAN: http://192.168.2.245:8001 — public https://akisok-admin.keresifon.com behind Cloudflare Access.
+Production admin + CronJob live on **homelab-k8s** (same Nexus / Cilium / homelab-k8s runner pattern as finance-agent). See `deploy/k8s/README.md`. LAN: http://192.168.2.245:8001 — public https://akisok-admin.keresifon.com behind Cloudflare Access.
 
 ## Scheduled discovery (this Mac)
 

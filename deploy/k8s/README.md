@@ -45,5 +45,5 @@ Still needed before the first admin/pipeline image rolls out:
 
 - `GIT_TOKEN` in `.env` (fine-grained PAT, Contents write on `kere-sifon/akisok-site`), then `make secrets`
 - `gh secret set NEXUS_PUSH_PASSWORD -R kere-sifon/akisok-agent`
-- Push `main` on `kere-sifon/akisok-agent` so gh-runner-02 builds the image
+- Push `main` on `kere-sifon/akisok-agent` so the homelab-k8s runner builds the image
 - After a CronJob succeeds: `make uninstall-mac-cron`

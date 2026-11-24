@@ -22,7 +22,7 @@ permissions:
 
 jobs:
   deploy:
-    runs-on: [self-hosted, linux, x64, homelab]
+    runs-on: homelab-k8s
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
@@ -36,6 +36,31 @@ jobs:
           echo "${{ secrets.KUBE_CONFIG_B64 }}" | base64 --decode > "$RUNNER_TEMP/kube/config"
           chmod 600 "$RUNNER_TEMP/kube/config"
           echo "KUBECONFIG=$RUNNER_TEMP/kube/config" >> "$GITHUB_ENV"
+
+      # The runner pod image does not always ship kubectl; deploy.sh needs it.
+      - name: Ensure kubectl on PATH
+        run: |
+          set -euo pipefail
+          if command -v kubectl >/dev/null 2>&1; then
+            KUBECTL="$(command -v kubectl)"
+          else
+            KUBECTL=""
+            for candidate in /usr/local/bin/kubectl /usr/bin/kubectl "$HOME/bin/kubectl"; do
+              if [ -x "$candidate" ]; then
+                KUBECTL="$candidate"
+                break
+              fi
+            done
+            if [ -z "$KUBECTL" ]; then
+              mkdir -p "$HOME/bin"
+              curl -fsSL -o "$HOME/bin/kubectl" https://dl.k8s.io/release/v1.31.4/bin/linux/amd64/kubectl
+              chmod +x "$HOME/bin/kubectl"
+              KUBECTL="$HOME/bin/kubectl"
+            fi
+            echo "PATH=$(dirname "$KUBECTL"):$PATH" >> "$GITHUB_ENV"
+          fi
+          echo "Using kubectl at $KUBECTL"
+          "$KUBECTL" version --client
 
       - name: Build, push and roll out
         env:

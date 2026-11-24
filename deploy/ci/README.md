@@ -1,6 +1,12 @@
 # CI deploy pipeline (akisok-agent)
 
-Runs on **gh-runner-02** (`kere-sifon` org). GitHub-hosted runners cannot reach Nexus or the cluster.
+Runs on the `kere-sifon` org's self-hosted Actions runner, a pod inside the
+homelab cluster (`runs-on: homelab-k8s`). GitHub-hosted runners cannot reach
+Nexus or the cluster.
+
+The runner image doesn't always include `kubectl`, so the **Ensure kubectl on
+PATH** step uses one already on the runner (`PATH`, `/usr/local/bin`,
+`/usr/bin`, or `~/bin`) or downloads kubectl v1.31.4 to `~/bin`.
 
 ## One-time setup (Mac, admin kubeconfig)
 
